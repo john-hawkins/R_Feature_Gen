@@ -35,20 +35,23 @@ getLogOddsTable <- function(df, columns, target) {
 # #################################################################################################
 
 applyLogOddsTable <- function(df, columns, lo.tab, suffix='lodds', include.naive.bayes=TRUE) {
+  dt <- data.table(df)
 
   addColumns <- foreach(col = columns, .combine=cbind) %dopar% {
-    temp <- lo.tab[[col]]
-    vals <- temp[ as.character( df[[col]] ), lo]
-    vals <- ifelse(is.na(vals), 0, vals)
+    temp 	<- lo.tab[[col]]
+    missing     <- mean(temp$lo)
+    vals 	<- temp[ as.character( dt[[col]] ), lo]
+    vals 	<- ifelse(is.na(vals), missing, vals)
     vals
   } 
 
   new.names <- lapply(columns, function(n) { paste(n, '.', suffix, sep='') } )
   colnames(addColumns) <- new.names
 
-  final.df <- cbind(df, addColumns)
+  final.df <- cbind(dt, addColumns)
   if(include.naive.bayes) { 
-   final.df$naiveBayes <- apply( final.df[, colnames(addColumns)], 1, function(lo) sum(lo))
+     nbcol	<- paste('naiveBayes', suffix, sep='_')
+     final.df[,nbcol] <- apply( final.df[, colnames(addColumns), with=FALSE], 1, function(lo) sum(lo))
   }
   final.df
 }
